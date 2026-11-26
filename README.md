@@ -26,12 +26,12 @@ Oito desses fragmentos, sorteados a cada carregamento, são portas para projetos
 |---|---|---|
 | Headhuntr | Vagas diárias com quem abordar | [headhuntr-v1.lovable.app](https://headhuntr-v1.lovable.app/) |
 | Riscô | Desenho infantil vira cartaz | [riscoaventura.lovable.app](https://riscoaventura.lovable.app/) |
-| Calor.IA | Calorias da refeição por foto | [caloria-br.lovable.app](https://caloria-br.lovable.app/) |
 | Sertãozin | Café com grãos em 3D | [sertaozincafes.netlify.app](https://sertaozincafes.netlify.app/) |
 | Solto DSG | Estúdio de design e marca | [soltodsg.netlify.app](https://soltodsg.netlify.app/) |
 | Ponte Edu | Oficinas de arte urbana | [ponteedu.netlify.app](https://ponteedu.netlify.app/) |
 | Carioca Infocel | Assistência de celular, Vila Isabel | [site](https://steep-snow-732b.bohmarfu33333.workers.dev/) |
 | Sob o Sol Expo | Exposição de João Gabriel Salomão | [site](https://withered-sun-e815.bohmarfu33333.workers.dev/) |
+| Calor.IA | Calorias da refeição por foto | [caloria-br.lovable.app](https://caloria-br.lovable.app/) |
 
 ## Por dentro
 
