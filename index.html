@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Fragmentos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* VOICE: experimental, glitchy, quiet
+   IDEA: a live TouchDesigner patch slicing a portrait into a treemap; 8 slices are doors to projects
+   PICTURE: the portrait itself, recursively cut into springing rectangles
+   COLOUR and TYPE: the photo's own beige, warm brown mono annotations
+   LAYOUT: one fullscreen stage */
+html,body{margin:0;height:100%;background:#a8896c;overflow:hidden}
+body{display:flex;align-items:center;justify-content:center}
+#stage{position:fixed;inset:0;width:100vw;height:100vh;height:100dvh;background:#a8896c}
+canvas{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:crosshair;touch-action:none}
+.hud{position:absolute;font:11px/1.35 ui-monospace,"SF Mono",Menlo,Consolas,monospace;color:rgba(255,244,230,.82);pointer-events:none;white-space:pre}
+#br{bottom:14px;right:16px;text-align:right}#bl{bottom:14px;left:16px}
+#gh{position:absolute;display:flex;border:0;padding:0;margin:0;align-items:center;justify-content:center;background:#0a0908;color:#8d9196;font:500 14px/1 "IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;letter-spacing:.08em;text-decoration:none;opacity:0;transition:opacity .15s;cursor:pointer;white-space:nowrap;overflow:hidden}
+#gh:hover,#gh:focus-visible{opacity:1;outline:none}
+#loading{position:absolute;inset:0;display:grid;place-items:center;font:12px ui-monospace,Menlo,monospace;color:#fff4e6}
+
+/* link invisível que acompanha o projeto sob o mouse */
+#pl{position:absolute;display:none;cursor:pointer;-webkit-tap-highlight-color:transparent}
+#pl:focus-visible{outline:2px solid #fff4e6;outline-offset:-2px}
+
+/* toque: não existe hover, então o link do GitHub fica sempre visível */
+@media (hover:none){#gh{opacity:1}}
+
+/* ---------- terminal de projetos ---------- */
+#term{position:fixed;inset:0;z-index:10;display:grid;place-items:center;padding:clamp(10px,3vw,40px);background:rgba(22,16,12,.5);backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px)}
+#term[hidden]{display:none}
+.win:focus{outline:none}
+.win{--ink:#8d9196;--hi:#f3e4d0;--acc:#c9a27e;position:relative;width:min(1180px,100%);max-height:100%;display:flex;flex-direction:column;background:#0a0908;color:var(--ink);border:1px solid rgba(243,228,208,.2);box-shadow:0 30px 80px rgba(0,0,0,.55);font-family:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;overflow:hidden;animation:pop .22s cubic-bezier(.2,.9,.3,1.2)}
+.win::after{content:"";position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(to bottom,rgba(255,255,255,.025) 0 1px,transparent 1px 3px)}
+@keyframes pop{from{opacity:0;transform:scale(.97) translateY(8px)}}
+.bar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 14px;background:#a8896c;color:#1b1714;font:600 12px/1 "IBM Plex Mono",ui-monospace,monospace;letter-spacing:.06em}
+.bar button{all:unset;cursor:pointer;padding:6px 8px;margin:-6px -8px}
+.bar button:hover,.bar button:focus-visible{background:#1b1714;color:#a8896c}
+.tb{overflow:auto;padding:clamp(14px,2.4vw,28px) clamp(14px,2.6vw,32px) clamp(16px,2.6vw,30px);scrollbar-color:#3a3330 transparent}
+.cmd{font-size:13px;line-height:1.5;color:var(--acc);white-space:pre-wrap;min-height:1.5em}
+.cmd a{color:var(--hi);text-decoration:none;border-bottom:1px solid rgba(243,228,208,.35)}
+.cmd a:hover,.cmd a:focus-visible{background:var(--hi);color:#0a0908;outline:none}
+.cur{display:inline-block;width:.6em;background:var(--acc);animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+#list{list-style:none;margin:14px 0 18px;padding:0}
+.row{display:grid;grid-template-columns:46px minmax(0,1fr) minmax(0,300px);align-items:center;column-gap:18px;padding:4px 10px 4px 4px;color:inherit;text-decoration:none;outline:none;opacity:0}
+.row.in{opacity:1}
+.ix{display:flex;flex-direction:column;align-items:center;font-size:11px;line-height:1.05;color:#5c6064}
+.ix i{font-style:normal;position:relative}
+.nm{font-size:clamp(24px,min(4.4vw,6vh),56px);line-height:1.18;padding-top:.04em;letter-spacing:.01em;text-transform:uppercase;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:clip}
+.meta{font-size:12px;line-height:1.45;align-self:center}
+.meta .r{color:var(--acc)}
+.meta .d{color:#6c7075}
+.meta .u{color:#4d5155;display:inline-block;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;vertical-align:bottom}
+.row:hover,.row:focus-visible,.row.sel{background:rgba(168,137,108,.13)}
+.row:hover .nm,.row:focus-visible .nm,.row.sel .nm{color:var(--hi)}
+.row:hover .ix,.row:focus-visible .ix,.row.sel .ix{color:var(--acc)}
+.row:hover .ix i,.row:focus-visible .ix i,.row.sel .ix i{visibility:hidden}
+.row:hover .ix i::before,.row:focus-visible .ix i::before,.row.sel .ix i::before{content:">";visibility:visible;position:absolute}
+.row:hover .meta .d,.row:focus-visible .meta .d{color:var(--ink)}
+.row:hover .meta .u,.row:focus-visible .meta .u{color:var(--hi)}
+.foot{white-space:pre;font-size:12px;color:#5c6064;margin:0 0 4px}
+@media (max-width:720px){
+  .row{grid-template-columns:34px minmax(0,1fr);row-gap:2px;padding:8px 6px 8px 0}
+  .meta{grid-column:2}
+  .nm{white-space:normal}
+}
+@media (prefers-reduced-motion:reduce){.win{animation:none}.cur{animation:none}}
+
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="c"></canvas>
+  <a id="pl" href="#" target="_blank" rel="noopener"></a>
+  <button id="gh" type="button" aria-haspopup="dialog" aria-controls="term">PROJETOS</button>
+  <div id="loading">carregando…</div>
+  <div class="hud" id="bl"></div>
+  <div class="hud" id="br"></div>
+</div>
+<div id="term" role="dialog" aria-modal="true" aria-labelledby="ttl" hidden>
+  <div class="win" tabindex="-1">
+    <div class="bar"><span id="ttl">C:\PORTFOLIO\PROJETOS.EXE</span><button type="button" id="tx">[ESC] FECHAR</button></div>
+    <div class="tb">
+      <div class="cmd" id="c1"></div>
+      <ol id="list"></ol>
+      <div class="foot" id="foot"></div>
+      <div class="cmd" id="c2"></div>
+    </div>
+  </div>
+</div>
+<script>
+{
+// ---------- PROJETOS ----------
+// roles: o que você fez em cada um (aparece na janela PROJETOS)
+// thumb: coloque um print de cada site na pasta thumbs/ com estes nomes.
+// se o arquivo não existir, o retângulo mostra o pedaço da foto escurecido.
+const PROJECTS=[
+  {name:'Headhuntr',      roles:'produto / ux / dev / ia',       desc:'Vagas diárias com quem abordar',     url:'https://headhuntr-v1.lovable.app/',                         thumb:'thumbs/headhuntr.jpg'},
+  {name:'Riscô',          roles:'conceito / design / ia',        desc:'Desenho infantil vira cartaz',       url:'https://riscoaventura.lovable.app/',                        thumb:'thumbs/risco.jpg'},
+  {name:'Calor.IA',       roles:'produto / ux / dev / ia',       desc:'Calorias da refeição por foto',      url:'https://caloria-br.lovable.app/',                           thumb:'thumbs/caloria.jpg'},
+  {name:'Sertãozin',      roles:'branding / design / 3d / dev',  desc:'Café com grãos em 3D',               url:'https://sertaozincafes.netlify.app/',                       thumb:'thumbs/sertaozin.jpg'},
+  {name:'Solto DSG',      roles:'branding / design / dev',       desc:'Estúdio de design e marca',          url:'https://soltodsg.netlify.app/',                             thumb:'thumbs/solto.jpg'},
+  {name:'Ponte Edu',      roles:'design / ux / dev',             desc:'Oficinas de arte urbana',            url:'https://ponteedu.netlify.app/',                             thumb:'thumbs/ponte-edu.jpg'},
+  {name:'Carioca Infocel',roles:'design / 3d / dev',             desc:'Assistência de celular, Vila Isabel',url:'https://steep-snow-732b.bohmarfu33333.workers.dev/',        thumb:'thumbs/carioca-infocel.jpg'},
+  {name:'Sob o Sol Expo', roles:'design / motion / dev',         desc:'Exposição de João Gabriel Salomão',  url:'https://withered-sun-e815.bohmarfu33333.workers.dev/',      thumb:'thumbs/sob-o-sol.jpg'},
+];
+
+const stage=document.getElementById('stage'),cv=document.getElementById('c'),ctx=cv.getContext('2d');
+const hudBR=document.getElementById('br'),hudBL=document.getElementById('bl'),gh=document.getElementById('gh');
+const img=new Image();img.src='foto.jpg';
+let W=0,H=0,dpr=1,root=null,leaves=[],nodes=[],crop={x:0,y:0,w:1,h:1};
+const mouse={x:.5,y:.5,px:.5,py:.5,on:false,speed:0,energy:0};
+let seed=(Math.random()*1e9)|0;
+function rnd(){seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}
+const clamp=(v,a,b)=>v<a?a:v>b?b:v;
+
+// thumbs dos projetos
+PROJECTS.forEach(p=>{p.img=new Image();p.img.onload=()=>{p.ok=true};p.img.src=p.thumb});
+
+const pl=document.getElementById('pl');
+
+// distância "da pessoa": elipse centrada no rosto
+function personDist(cx,cy){return Math.hypot((cx-.5)/.27,(cy-.52)/.62)}
+
+// celular: 33 retângulos · desktop: 66 (decide pelo aparelho, não pela janela)
+const isMobile=()=>(navigator.userAgentData&&navigator.userAgentData.mobile)||/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)||matchMedia('(hover:none) and (pointer:coarse)').matches;
+let TARGET=isMobile()?33:66;
+// tamanho mínimo (px) de um retângulo de projeto, pra caber nome + descrição
+// só para sortear: projetos saem entre os retângulos que nascem com pelo menos este tamanho
+const projMinPx=()=>isMobile()?{w:80,h:50}:{w:120,h:70};
+
+function makeLeaf(n){return Object.assign(n,{leaf:true})}
+function splitLeaf(n){
+  // usa a proporção real da tela (no celular em pé, evita tiras finas)
+  const pw=n.w*stageAR,ph=n.h;
+  let axis=pw>ph?0:1; if(pw/ph<1.6&&ph/pw<1.6&&rnd()<.3)axis=1-axis;
+  const base=.27+rnd()*.46;
+  delete n.leaf;
+  Object.assign(n,{axis,base,r:clamp(base+(rnd()-.5)*.9,.04,.96),v:0,pol:rnd()<.72?1:-1,ph:rnd()*6.28,sp:.4+rnd()*.8});
+  const {x,y,w,h,depth}=n;
+  if(axis===0){n.a=makeLeaf({x,y,w:w*base,h,depth:depth+1});n.b=makeLeaf({x:x+w*base,y,w:w*(1-base),h,depth:depth+1})}
+  else{n.a=makeLeaf({x,y,w,h:h*base,depth:depth+1});n.b=makeLeaf({x,y:y+h*base,w,h:h*(1-base),depth:depth+1})}
+  return [n.a,n.b];
+}
+// peso: no rosto as peças ficam ~2x menores que no fundo
+const weight=n=>{const d=personDist(n.x+n.w/2,n.y+n.h/2);return n.w*n.h*(d<1?2.2:d<1.4?1.4:.8)};
+
+let ghLeaf=null,projLeaves=[],stageAR=16/9;
+function rebuild(){
+  {const r=stage.getBoundingClientRect();stageAR=r.width&&r.height?r.width/r.height:16/9}
+  root=makeLeaf({x:0,y:0,w:1,h:1,depth:0});
+  let pool=[root];
+  while(pool.length<TARGET){
+    let bi=0,bv=-1;
+    pool.forEach((n,i)=>{const v=weight(n)*(.65+rnd()*.7);if(v>bv){bv=v;bi=i}});
+    const n=pool.splice(bi,1)[0];pool.push(...splitLeaf(n));
+  }
+  nodes=[];leaves=[];
+  (function walk(n){if(n.leaf){n.id=leaves.length;n.proj=-1;leaves.push(n)}else{nodes.push(n);walk(n.a);walk(n.b)}})(root);
+  // canto superior direito = PROJETOS
+  ghLeaf=leaves.find(L=>L.x+L.w>=.9999&&L.y<=.0001);
+  pickProjects();
+  computeNeeds();
+  active=-1;sticky=-1;
+  hudBL.textContent=`${leaves.length} fragmentos · ${PROJECTS.length} projetos · seed ${seed>>>0}`;
+}
+
+// sorteia 8 retângulos (entre os que têm tamanho pra virar link)
+function pickProjects(){
+  const r=stage.getBoundingClientRect(),m=projMinPx();
+  const mw=m.w/(r.width||1),mh=m.h/(r.height||1);
+  let cand=leaves.filter(L=>L!==ghLeaf&&L.w>=mw*1.1&&L.h>=mh*1.1);
+  for(let i=cand.length-1;i>0;i--){const j=(rnd()*(i+1))|0;[cand[i],cand[j]]=[cand[j],cand[i]]}
+  if(cand.length<PROJECTS.length){
+    const rest=leaves.filter(L=>L!==ghLeaf&&!cand.includes(L)).sort((a,b)=>b.w*b.h-a.w*a.h);
+    cand=cand.concat(rest);
+  }
+  // espalha: evita projetos colados uns nos outros quando dá
+  const cx=L=>(L.x+L.w/2)*stageAR,cy=L=>L.y+L.h/2;
+  const picked=[],skipped=[];
+  for(const L of cand){
+    if(picked.length>=PROJECTS.length)break;
+    const far=picked.every(P=>Math.hypot(cx(P)-cx(L),cy(P)-cy(L))>.42);
+    (far?picked:skipped).push(L);
+  }
+  while(picked.length<PROJECTS.length&&skipped.length)picked.push(skipped.shift());
+  projLeaves=picked;
+  projLeaves.forEach((L,i)=>{L.proj=i});
+}
+
+// tamanho mínimo do retângulo do GitHub, propagado pela árvore
+let ghMinW=.1,ghMinH=.05;
+function measureGH(){
+  const r=stage.getBoundingClientRect();if(!r.width)return;
+  const m=document.createElement('canvas').getContext('2d');m.font='500 14px "IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace';
+  const tw=m.measureText('PROJETOS').width*1.12+40;
+  ghMinW=Math.min(.9,tw/r.width);ghMinH=Math.min(.5,48/r.height);
+}
+function computeNeeds(){
+  if(!root)return;
+  (function need(n){
+    if(n.leaf){
+      if(n===ghLeaf){n.nw=ghMinW;n.nh=ghMinH}
+            else{n.nw=0;n.nh=0}
+      return;
+    }
+    need(n.a);need(n.b);
+    if(n.axis===0){n.nw=n.a.nw+n.b.nw;n.nh=Math.max(n.a.nh,n.b.nh)}
+    else{n.nw=Math.max(n.a.nw,n.b.nw);n.nh=n.a.nh+n.b.nh}
+  })(root);
+}
+
+function resize(){
+  const r=stage.getBoundingClientRect();dpr=Math.min(window.devicePixelRatio||1,2);
+  W=Math.round(r.width*dpr);H=Math.round(r.height*dpr);cv.width=W;cv.height=H;
+  if(img.naturalWidth)computeCrop();measureGH();computeNeeds();
+}
+function computeCrop(){
+  const iw=img.naturalWidth,ih=img.naturalHeight,ar=W/H||16/9;
+  if(iw/ih>ar){const w=ih*ar;crop={x:(iw-w)/2,y:0,w,h:ih}}else{const h=iw/ar;crop={x:0,y:(ih-h)/2,w:iw,h}}
+}
+
+function layout(n,x,y,w,h){
+  n.dx=x;n.dy=y;n.dw=w;n.dh=h;if(n.leaf)return;
+  const s=n.axis===0?w:h,na=n.axis===0?n.a.nw:n.a.nh,nb=n.axis===0?n.b.nw:n.b.nh;
+  if(na||nb){
+    const lo=na/s,hi=1-nb/s;
+    const r=lo>hi?na/(na+nb):clamp(n.r,lo,hi);
+    if(r!==n.r){n.r=r;n.v=0}
+  }
+  if(n.axis===0){const a=w*n.r;layout(n.a,x,y,a,h);layout(n.b,x+a,y,w-a,h)}
+  else{const a=h*n.r;layout(n.a,x,y,w,a);layout(n.b,x,y+a,w,h-a)}
+}
+const inside=(n,x,y)=>x>=n.dx&&x<=n.dx+n.dw&&y>=n.dy&&y<=n.dy+n.dh;
+
+function physics(t){
+  const S=.45+mouse.energy*1.1;
+  for(const n of nodes){
+    let target=n.base+.035*Math.sin(t*.0006*n.sp+n.ph);
+    if(mouse.on&&inside(n,mouse.x,mouse.y)){
+      const u=n.axis===0?(mouse.x-n.dx)/n.dw:(mouse.y-n.dy)/n.dh;
+      target+=n.pol*S*(n.base-u)*(n.depth<2?.3:n.depth<3?.6:1+n.depth*.05);
+    }else if(mouse.on){
+      const cx=n.dx+n.dw/2,cy=n.dy+n.dh/2,dd=Math.hypot(cx-mouse.x,(cy-mouse.y)*.5625);
+      target+=n.pol*.12*mouse.energy*Math.exp(-dd*6)*Math.sin(t*.01+n.ph);
+    }
+    target=clamp(target,.05,.95);
+    n.v+=(target-n.r)*.075;n.v*=.8;n.r=clamp(n.r+n.v,.02,.98);
+  }
+}
+
+function leafAt(x,y){let n=root;while(n&&!n.leaf)n=inside(n.a,x,y)?n.a:n.b;return n}
+
+function drawLeaf(L){
+  const dx=L.dx*W,dy=L.dy*H,dw=L.dw*W,dh=L.dh*H;
+  if(dw<.6||dh<.6)return;
+  const p=L.proj>=0?PROJECTS[L.proj]:null;
+  if(p&&p.ok){
+    // print do projeto, preenchendo o retângulo (ancorado no topo da página)
+    const iw=p.img.naturalWidth,ih=p.img.naturalHeight,s=Math.max(dw/iw,dh/ih);
+    const sw=dw/s,sh=dh/s;
+    ctx.drawImage(p.img,(iw-sw)/2,0,sw,sh,dx,dy,dw,dh);
+    return;
+  }
+  ctx.drawImage(img,crop.x+L.x*crop.w,crop.y+L.y*crop.h,L.w*crop.w,L.h*crop.h,dx,dy,dw,dh);
+}
+
+// dados aparecem em UM retângulo por vez (nunca nos projetos nem no GitHub)
+let idleLeaf=null,idleUntil=0;
+function drawLabels(t){
+  const fs=Math.max(8,Math.round(8.5*dpr));
+  const fits=L=>L!==ghLeaf&&L.proj<0&&L.dw*W>=fs*14&&L.dh*H>=fs*6;
+  let L=null;
+  if(mouse.on){
+    const h=leafAt(mouse.x,mouse.y);if(active>=0||(h&&h===ghLeaf))return;
+    L=h;
+    if(!L||!fits(L)){let bd=1e9;for(const c of leaves){if(!fits(c))continue;const ex=Math.max(c.dx-mouse.x,0,mouse.x-c.dx-c.dw),ey=Math.max(c.dy-mouse.y,0,mouse.y-c.dy-c.dh),dd=ex*ex+ey*ey*.32;if(dd<bd){bd=dd;L=c}}}
+  }else{
+    if(active>=0)return;
+    if(!idleLeaf||t>idleUntil||!fits(idleLeaf)){const c=leaves.filter(fits);idleLeaf=c.length?c[(rnd()*c.length)|0]:null;idleUntil=t+2500}
+    L=idleLeaf;
+  }
+  if(!L||!fits(L))return;
+  const dx=L.dx*W,dy=L.dy*H,dw=L.dw*W,dh=L.dh*H;
+  ctx.font=`${fs}px ui-monospace,Menlo,Consolas,monospace`;ctx.textBaseline='top';
+  ctx.save();ctx.beginPath();ctx.rect(dx,dy,dw,dh);ctx.clip();
+  ctx.fillStyle='rgba(255,244,230,.85)';
+  const lines=['index   u   v   w   h',String(L.id),(L.dx).toFixed(15),(L.dw/L.w).toFixed(15),(L.dh/L.h).toFixed(15)];
+  lines.forEach((s,i)=>ctx.fillText(s,dx+fs*.7,dy+fs*.7+i*fs*1.25));
+  ctx.restore();
+}
+
+const pos=(el,L)=>{el.style.left=(L.dx*100)+'%';el.style.top=(L.dy*100)+'%';el.style.width=(L.dw*100)+'%';el.style.height=(L.dh*100)+'%'};
+
+// projeto ativo: o que está sob o mouse (ou o último tocado, no celular).
+// segura ~200ms quando o retângulo escapa do mouse, pra não piscar.
+let active=-1,sticky=-1,lastSeen=0;
+function updateActive(t){
+  let h=-1;
+  if(mouse.on){const L=leafAt(mouse.x,mouse.y);if(L&&L.proj>=0)h=L.proj}
+  if(h>=0){active=h;lastSeen=t}
+  else if(sticky>=0)active=sticky;
+  else if(active>=0&&(!mouse.on||t-lastSeen>200))active=-1;
+}
+function placeLinks(){
+  if(ghLeaf)pos(gh,ghLeaf);
+  const L=active>=0?projLeaves[active]:null;
+  if(!L){pl.style.display='none';return}
+  const p=PROJECTS[active];
+  if(pl.dataset.i!==String(active)){pl.dataset.i=active;pl.href=p.url;pl.setAttribute('aria-label',`${p.name}: ${p.desc}`)}
+  pl.style.display='block';pos(pl,L);
+}
+
+// mouse over: o próprio fragmento ganha a cor em alpha e o texto, e se mexe junto com ele
+const PLEX='"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace';
+if(document.fonts&&document.fonts.load){document.fonts.load(`400 14px ${PLEX}`);document.fonts.load(`400 10px ${PLEX}`)}
+function drawHover(){
+  if(active<0)return;
+  const L=projLeaves[active],p=PROJECTS[active];if(!L)return;
+  const dx=Math.round(L.dx*W),dy=Math.round(L.dy*H),dw=Math.round(L.dw*W),dh=Math.round(L.dh*H);
+  if(dw<2||dh<2)return;
+  const f1=Math.round(14*dpr),f2=Math.round(10*dpr),pad=Math.round(10*dpr),gap=Math.round(5*dpr);
+  ctx.save();
+  ctx.beginPath();ctx.rect(dx,dy,dw,dh);ctx.clip();
+  ctx.fillStyle='rgba(34,26,20,.62)';ctx.fillRect(dx,dy,dw,dh);
+  ctx.textBaseline='top';
+  ctx.fillStyle='#f3e4d0';ctx.font=`400 ${f1}px ${PLEX}`;ctx.fillText(p.name.toUpperCase(),dx+pad,dy+pad);
+  ctx.fillStyle='#e2c3a0';ctx.font=`400 ${f2}px ${PLEX}`;ctx.fillText('// '+p.roles,dx+pad,dy+pad+Math.round(f1*1.15)+gap);
+  ctx.restore();
+}
+
+function frame(t){
+  requestAnimationFrame(frame);
+  if(!root||!img.complete)return;
+  mouse.speed=Math.hypot(mouse.x-mouse.px,(mouse.y-mouse.py)*.5625);mouse.px=mouse.x;mouse.py=mouse.y;
+  mouse.energy=clamp(mouse.energy*.94+mouse.speed*2.2,0,.8);
+  layout(root,0,0,1,1);physics(t);layout(root,0,0,1,1);
+  ctx.fillStyle='#a8896c';ctx.fillRect(0,0,W,H);
+  for(const L of leaves)drawLeaf(L);
+  ctx.strokeStyle='rgba(255,246,236,.62)';ctx.lineWidth=Math.max(1,dpr*.8);
+  ctx.beginPath();
+  for(const L of leaves){const x=Math.round(L.dx*W)+.5,y=Math.round(L.dy*H)+.5;ctx.rect(x,y,Math.round(L.dw*W),Math.round(L.dh*H))}
+  ctx.stroke();
+  updateActive(t);
+  placeLinks();
+  drawHover();
+  drawLabels(t);
+  hudBR.textContent=mouse.on?`x ${mouse.x.toFixed(4)}  y ${mouse.y.toFixed(4)}\nenergia ${mouse.energy.toFixed(3)}`:'';
+}
+
+function setMouse(e){const r=cv.getBoundingClientRect();mouse.x=clamp((e.clientX-r.left)/r.width,0,1);mouse.y=clamp((e.clientY-r.top)/r.height,0,1)}
+let lastPT='mouse';
+stage.addEventListener('pointerenter',e=>{setMouse(e);mouse.px=mouse.x;mouse.py=mouse.y;mouse.on=true});
+stage.addEventListener('pointermove',e=>{setMouse(e);mouse.on=true});
+stage.addEventListener('pointerleave',()=>{mouse.on=false});
+stage.addEventListener('pointerdown',e=>{
+  lastPT=e.pointerType||'mouse';
+  if(e.target.closest('a,button'))return;
+  if(lastPT==='mouse'){seed=(Math.random()*1e9)|0;rebuild();return}   // clique fora dos projetos = novo corte
+  // toque: 1º toque num projeto mostra nome e descrição; o 2º (no link) abre
+  setMouse(e);mouse.on=true;
+  const L=leafAt(mouse.x,mouse.y);sticky=L&&L.proj>=0?L.proj:-1;active=sticky;
+});
+
+// ---------- janela PROJETOS (terminal) ----------
+const term=document.getElementById('term'),list=document.getElementById('list'),c1=document.getElementById('c1'),c2=document.getElementById('c2'),foot=document.getElementById('foot');
+const host=u=>u.replace(/^https?:\/\//,'').replace(/\/$/,'');
+const esc=v=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
+list.innerHTML=PROJECTS.map((p,i)=>`<li><a class="row" href="${esc(p.url)}" target="_blank" rel="noopener" aria-label="${esc(p.name)}: ${esc(p.roles)}. ${esc(p.desc)}">
+  <span class="ix"><i>#</i>${String(i+1).padStart(2,'0')}</span>
+  <span class="nm" data-t="${esc(p.name.toUpperCase())}"></span>
+  <span class="meta"><span class="r">// ${esc(p.roles)}</span><br><span class="d">"${esc(p.desc)}"</span><br><span class="u">${esc(host(p.url))} ↗</span></span>
+</a></li>`).join('');
+const rows=[...list.querySelectorAll('.row')];
+const reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
+let timers=[];
+const later=(fn,ms)=>timers.push(setTimeout(fn,ms));
+function type(el,text,speed,done,html){
+  if(reduce){html?el.innerHTML=html:el.textContent=text;done&&done();return}
+  let i=0;(function step(){el.textContent=text.slice(0,++i);if(i<text.length)later(step,speed);else{if(html)el.innerHTML=html;done&&done()}})();
+}
+function openTerm(){
+  timers.forEach(clearTimeout);timers=[];
+  term.hidden=false;mouse.on=false;
+  c1.textContent='';c2.innerHTML='';foot.textContent='';
+  rows.forEach(r=>{r.classList.remove('in','sel');r.querySelector('.nm').textContent=''});
+  type(c1,'C:\\PORTFOLIO> dir /projetos /w',14,()=>{
+    rows.forEach((r,i)=>later(()=>{
+      r.classList.add('in');const nm=r.querySelector('.nm');type(nm,nm.dataset.t,16);
+    },reduce?0:90*i));
+    later(()=>{
+      foot.textContent=`        ${PROJECTS.length} projeto(s)    clique para abrir`;
+      type(c2,'C:\\PORTFOLIO> start github.com/danmed33',14,null,
+        'C:\\PORTFOLIO&gt; start <a href="https://github.com/danmed33" target="_blank" rel="noopener">github.com/danmed33</a> <span class="cur">&nbsp;</span>');
+    },reduce?0:90*rows.length+260);
+  });
+  term.querySelector('.win').focus({preventScroll:true});
+}
+function closeTerm(){timers.forEach(clearTimeout);timers=[];term.hidden=true;gh.focus({preventScroll:true})}
+gh.addEventListener('click',openTerm);
+document.getElementById('tx').addEventListener('click',closeTerm);
+term.addEventListener('pointerdown',e=>{if(e.target===term)closeTerm()});
+document.addEventListener('keydown',e=>{
+  if(term.hidden)return;
+  if(e.key==='Escape'){e.preventDefault();closeTerm();return}
+  const i=rows.indexOf(document.activeElement);
+  if(e.key==='ArrowDown'||e.key==='ArrowUp'){
+    e.preventDefault();const n=i<0?0:e.key==='ArrowDown'?Math.min(rows.length-1,i+1):Math.max(0,i-1);rows[n].focus();
+  }
+});
+
+window.addEventListener('resize',()=>{
+  resize();const t=isMobile()?33:66,r=stage.getBoundingClientRect(),ar=r.width/r.height;
+  // refaz o corte se mudou de aparelho ou girou a tela (em pé / deitado)
+  if(root&&(t!==TARGET||(ar>1)!==(stageAR>1))){TARGET=t;rebuild()}
+});
+
+img.onload=()=>{resize();rebuild();document.getElementById('loading').remove()};
+requestAnimationFrame(frame);
+}
+</script>
+</body>
+</html>
