@@ -4,7 +4,7 @@ Portfólio de [@danmed33](https://github.com/danmed33): design, UX/UI e desenvol
 
 **Site:** https://danmed-dev.lovable.app
 
-![preview](public/foto.jpg)
+![Danmed UX UI DEV](docs/preview.png)
 
 ## A ideia
 
